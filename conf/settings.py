@@ -16,6 +16,8 @@ DEBUG = os.getenv('DJANGO_DEBUG')
 
 ALLOWED_HOSTS = ['*']
 
+os.environ['IMAGEIO_FFMPEG_EXE'] = '/path/to/ffmpeg'
+
 # Application definition
 
 INSTALLED_APPS = [
@@ -27,6 +29,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
 
     'users',
+    'converting',
 
     'rest_framework',
     'rest_framework_simplejwt',
@@ -152,8 +155,8 @@ CACHES = {
     }
 }
 
-EMAIL_HOST_USER = 'your email'
-EMAIL_HOST_PASSWORD = 'your email\'s host password'
+EMAIL_HOST_USER = 'nasriddinovfarrux03@gmail.com'
+EMAIL_HOST_PASSWORD = 'avvalcuvlvibldas'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
