@@ -1,6 +1,5 @@
 import os
 import sys
-from datetime import timedelta
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -18,7 +17,6 @@ ALLOWED_HOSTS = ['*']
 
 os.environ['IMAGEIO_FFMPEG_EXE'] = '/path/to/ffmpeg'
 
-# Application definition
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -28,7 +26,6 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
-    'users',
     'converting',
 
     'rest_framework',
@@ -48,7 +45,6 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = 'conf.urls'
-AUTH_USER_MODEL = 'users.UserProfile'
 
 TEMPLATES = [
     {
@@ -105,9 +101,6 @@ USE_TZ = True
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 REST_FRAMEWORK = {
-    # 'DEFAULT_PERMISSION_CLASSES': [
-    #     'shared.rest_framework.permissions.IsAdminUserOrReadOnly',
-    # ],
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework.authentication.SessionAuthentication',
         'rest_framework_simplejwt.authentication.JWTAuthentication',
@@ -131,42 +124,9 @@ SWAGGER_SETTINGS = {
     'PERSIST_AUTH': True
 }
 
-SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(days=9999),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=9999),
-    'ALGORITHM': 'HS256',
-    'UPDATE_LAST_LOGIN': True,
-    # "TOKEN_OBTAIN_SERIALIZER": "apps.shared.rest_framework.CustomTokenObtainPairSerializer",
-
-}
 
 STATIC_URL = 'static/'
 STATIC_ROOT = os.path.join(BASE_DIR / 'static/')
 MEDIA_URL = 'media/'
 MEDIA_ROOT = os.path.join(BASE_DIR / 'media/')
 
-CACHES = {
-    'default': {
-        'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': 'redis://localhost:6379/1',
-        'OPTIONS': {
-            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-        }
-    }
-}
-
-EMAIL_HOST_USER = 'nasriddinovfarrux03@gmail.com'
-EMAIL_HOST_PASSWORD = 'avvalcuvlvibldas'
-EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-
-CELERY_BROKER_URL = 'redis://localhost:6379/0'
-CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
-CELERY_ACCEPT_CONTENT = ['application/json']
-CELERY_RESULT_SERIALIZER = 'json'
-CELERY_TASK_SERIALIZER = 'json'
-CELERY_TIMEZONE = TIME_ZONE
-
-CACHE_TTL = 300
-CACHE_KEY_PREFIX = 'otp'

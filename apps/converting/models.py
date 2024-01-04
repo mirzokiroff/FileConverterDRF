@@ -1,21 +1,20 @@
 from uuid import uuid4
 
 from django.core.validators import FileExtensionValidator
-from django.db.models import Model, FileField, CharField, ForeignKey, CASCADE
+from django.db.models import Model, FileField, CharField
 from django.db.models.signals import pre_save
 from django.dispatch import receiver
-
-from conf import settings
 
 
 class ConvertedFile(Model):
     id = CharField(max_length=111, primary_key=True)
-    user = ForeignKey(settings.AUTH_USER_MODEL, on_delete=CASCADE, related_name='converter_user')
     original_file = FileField(upload_to='uploads/', validators=[
         FileExtensionValidator(
-            ['mp4', 'avi', 'mkv', 'mov', '3gp', 'mpg', 'flv', 'ts', 'wmv', 'webm', 'gif', 'jpg', 'heic'])])
+            ['jpg', 'jpeg', 'pdf', 'png'])
+    ])
     converted_file = FileField(upload_to='converted/')
-    target_format = CharField(max_length=50)
+    target_format = CharField(max_length=50, choices=[
+        ('jpg', 'JPG'), ('pdf', 'PDF'), ('png', 'PNG'), ('jpeg', 'JPEG')])
 
 
 @receiver(pre_save, sender=ConvertedFile)

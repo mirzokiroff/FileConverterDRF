@@ -1,6 +1,10 @@
 import io
 import os
 
+import fitz
+import cv2
+import numpy as np
+import pyheif
 from PIL import Image
 from django.core.files.base import ContentFile
 from django.http import HttpResponseNotFound, HttpResponse
@@ -22,34 +26,64 @@ class ConvertFileView(CreateAPIView):
     permission_classes = [AllowAny]
 
     def perform_create(self, serializer):
-        # Call the parent perform_create method to save the instance
         instance = serializer.save()
 
-        # Get the uploaded JPG file
         original_file_path = instance.original_file.path
-
-        # Extract the name of the original file without the extension
-        original_file_name = os.path.splitext(os.path.basename(original_file_path))[0]
-
-        # Generate the path for the converted PDF file without accessing it
-        converted_file_name = f"{original_file_name}.pdf"
+        original_file_name, original_file_extension = os.path.splitext(os.path.basename(original_file_path))
+        converted_file_name = f"{original_file_name}.{instance.target_format.lower()}"
+        original_format = instance.original_file.name.split('.')[-1].lower()
 
         try:
-            # Convert JPG to PDF using PIL
-            img = Image.open(original_file_path)
-            pdf_buffer = io.BytesIO()
-            img.save(pdf_buffer, format='PDF', resolution=100.0)
+            if instance.target_format in ['jpg', 'jpeg'] and original_format in ['jpeg', 'jpg']:
+                # JPG yoki JPEG formatidan JPEG yoki JPG formatiga o'tkazish
+                # Convert JPG or JPEG to JPEG or JPG
+                img = Image.open(original_file_path)
+                jpg_buffer = io.BytesIO()
+                img.save(jpg_buffer, format='jpeg', resolution=100.0)
+                instance.converted_file.save(converted_file_name, ContentFile(jpg_buffer.getvalue()))
+            elif instance.target_format in ['jpg', 'jpeg', 'png'] and original_format == 'png':
+                # PNG formatida JPG yoki JPEG formatiga o'tkazish
+                # Convert PNG to JPG or JPEG
 
-            # Save the converted PDF to the 'converted/' directory
-            instance.converted_file.save(converted_file_name, ContentFile(pdf_buffer.getvalue()))
-            instance.target_format = "pdf"
-            instance.save()
+                png_image = Image.open(original_file_path)
 
-            # Return the response with the converted file
+                jpg_buffer = io.BytesIO()
+                png_image.convert("RGB").save(jpg_buffer, format="JPEG", quality=100)
+                instance.converted_file.save(converted_file_name, ContentFile(jpg_buffer.getvalue()))
+            elif instance.target_format == 'png' and original_format in ['jpg', 'jpeg', 'png']:
+                # JPG va JPEG formatidan PNG formatiga o'tkazish
+                # Convert JPG or JPEG to PNG
+                image = Image.open(original_file_path)
+                png_buffer = io.BytesIO()
+                image.save(png_buffer, format='PNG', resolution=100.0)
+                instance.converted_file.save(converted_file_name, ContentFile(png_buffer.getvalue()))
+            elif instance.target_format in ['jpg', 'jpeg', 'png', 'pdf'] and original_format == 'pdf':
+                # PDF formatidan JPG yoki JPEG yoki PNG formatiga o'tkazish
+                # Convert PDF to JPG or JPEG or PNG
+                pdf_document = fitz.open(instance.original_file.path)  # noqa
+                pdf_page = pdf_document[0]
+
+                pdf_image = pdf_page.get_pixmap()
+
+                pil_image = Image.frombytes("RGB", [pdf_image.width, pdf_image.height], pdf_image.samples)  # noqa
+
+                jpg_buffer = io.BytesIO()
+                pil_image.save(jpg_buffer, format="JPEG", quality=100)
+
+                instance.converted_file.save(converted_file_name, ContentFile(jpg_buffer.getvalue()))
+            elif instance.target_format == 'pdf' and original_format in ['jpg', 'jpeg', 'png', 'pdf']:
+                # JPG yoki JPEG yoki PNG formatidan PDF formatiga o'tkazish
+                # Convert JPG or JPEG or PNG to PDF
+                image = Image.open(original_file_path)
+
+                pdf_buffer = io.BytesIO()
+                image.save(pdf_buffer, format='PDF', resolution=100.0)
+                instance.converted_file.save(converted_file_name, ContentFile(pdf_buffer.getvalue()))
+
+                instance.save()
             return Response({"message": "File converted successfully", "converted_file": instance.converted_file.url},
                             status=status.HTTP_201_CREATED)
         except Exception as e:
-            # If an error occurs during conversion, delete the instance and return an error response
             instance.delete()
             return Response({"error": f"Conversion failed: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -57,16 +91,14 @@ class ConvertFileView(CreateAPIView):
 class DownloadFileView(APIView):
     permission_classes = [AllowAny]
 
-    def get(self, request, file_id):
+    def get(self, request, file_id):  # noqa
         try:
             converted_file = ConvertedFile.objects.get(id=file_id)
             file_path = converted_file.converted_file.path
 
-            # Check if the file exists before attempting to open it
             if not os.path.exists(file_path):
                 return HttpResponseNotFound("File not found")
 
-            # Create a FileResponse with the content type 'application/pdf'
             with open(file_path, 'rb') as file:
                 response = HttpResponse(file.read(), content_type='application/pdf')
                 response['Content-Disposition'] = f'attachment; filename="{converted_file.converted_file.name}"'
